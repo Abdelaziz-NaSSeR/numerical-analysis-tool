@@ -90,14 +90,16 @@ double bisectionMethod(ExpressionParser& parser, const std::string& expression,
 
 // Secant method implementation for finding roots of equations
 double secantMethod(ExpressionParser& parser, const std::string& expression,
-                    double tol, int maxIter) {
+                    double tol , int maxIter ) {
     // Find suitable interval containing a root
     auto [a, b] = findRootInterval(parser, expression);
+
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<double>::quiet_NaN();
+
     // Initialize with the interval boundaries
-    double x_prev = 2;  // x₀
-    double x_curr = 3;  // x₁
+    double x_prev = a;  // x₀
+    double x_curr = b;  // x₁
 
     // Evaluate function at initial points
     parser.setVariable("x", x_prev);
@@ -115,8 +117,22 @@ double secantMethod(ExpressionParser& parser, const std::string& expression,
     double x_next, f_next;
 
     while (std::abs(f_curr) > tol && iter < maxIter) {
+        // Prevent division by zero
+        if (std::abs(f_curr - f_prev) < 1e-15) {
+            // If function values are too close, slightly perturb one of the points
+            x_curr += 0.01;
+            parser.setVariable("x", x_curr);
+            f_curr = parser.evaluate(expression);
+            continue;
+        }
+
         // Calculate next approximation using secant formula
         x_next = x_curr - (f_curr * (x_curr - x_prev)) / (f_curr - f_prev);
+
+        // If x_next is outside our initial interval, reset to midpoint
+        if (x_next < a - 100 || x_next > b + 100) {
+            x_next = (a + b) / 2;
+        }
 
         // Evaluate function at new point
         parser.setVariable("x", x_next);
@@ -137,8 +153,6 @@ double secantMethod(ExpressionParser& parser, const std::string& expression,
     // Return final approximation
     return x_curr;
 }
-
-
 
 //############################### Newton Raphson ###########################################
 double differentiate(ExpressionParser& parser, const std::string& expression, double x) {
